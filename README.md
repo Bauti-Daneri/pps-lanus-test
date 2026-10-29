@@ -12,7 +12,7 @@ Web app de billetera para el club, siguiendo el [diseño de Figma](https://www.f
 - [x] Repo en GitHub y deploy automático en Vercel en cada push a `main`
 - [x] Base PostgreSQL en Neon (región São Paulo)
 - [x] Prisma 7 con el modelo `User` y la migración inicial
-- [ ] Seed con el usuario de prueba y contraseña hasheada
+- [X] Seed con el usuario de prueba y contraseña hasheada
 - [ ] Login y sesión
 - [ ] Home: tarjeta y últimos movimientos
 - [ ] Movimientos: búsqueda por nombre o servicio y filtros rápidos
@@ -65,13 +65,19 @@ Web app de billetera para el club, siguiendo el [diseño de Figma](https://www.f
 
    En producción se usa `npx prisma migrate deploy`.
 
-5. Levantar el servidor de desarrollo y abrir http://localhost:3000:
+5. Cargar el usuario de prueba:
+
+   ```bash
+   npx prisma db seed
+   ```
+
+   Ejecuta `prisma/seed.ts` con `tsx` (registrado en `migrations.seed` de `prisma.config.ts`) y usa `DATABASE_URL`. Es idempotente: hace `upsert` por email, así que correrlo de nuevo no duplica el usuario.
+
+6. Levantar el servidor de desarrollo y abrir http://localhost:3000:
 
    ```bash
    npm run dev
    ```
-
-**[Pendiente]** Seed de datos: `npx prisma db seed`.
 
 ### Usuario de prueba
 
@@ -80,7 +86,7 @@ Según la consigna del challenge:
 - Email: `soygranate@clublanus.com`
 - Contraseña: `GRANATE1@`
 
-**[Pendiente]** Se cargará con el seed.
+Lo crea el seed. En la base se guarda solo el hash de la contraseña (bcrypt), nunca el texto plano.
 
 ### Scripts
 
@@ -100,10 +106,13 @@ Según la consigna del challenge:
 - **Dos cadenas de conexión a Neon.** La *pooled* para la app, porque en un entorno serverless se abren muchas conexiones cortas; la directa para las migraciones, porque el pooler puede interferir con operaciones de esquema.
 - **Cliente de Prisma generado fuera de Git.** Vive en `src/generated/prisma`, está en `.gitignore` y se genera en el `postinstall`, también en Vercel.
 - **Autenticación implementada a mano.** Se desactivó el servicio de auth gestionado que ofrece Neon para entender y poder explicar el flujo de sesión.
+- **Un único cliente de Prisma para la app.** `src/lib/prisma.ts` crea el cliente con `@prisma/adapter-pg` y `DATABASE_URL`, y en desarrollo lo guarda en `globalThis` para que el hot reload no abra un pool de conexiones nuevo en cada recarga.
+- **Contraseñas hasheadas con `bcryptjs`.** Es JavaScript puro: no necesita compilar binarios nativos en Windows ni en Vercel, a diferencia de `bcrypt` o `argon2`.
+- **El seed usa la conexión *pooled*.** Solo hace consultas comunes (no cambia el esquema), así que usa la misma cadena que la app. Tiene su propio cliente en lugar de importar `src/lib/prisma.ts`, para no mezclar el script de CLI con el código de la app.
 
 ### Planeadas (todavía no implementadas)
 
-- Contraseñas con `bcrypt` y sesión con JWT firmado en una cookie `httpOnly`.
+- Login que compare la contraseña contra el hash con `bcryptjs` y sesión con JWT firmado en una cookie `httpOnly`.
 - La sesión se verifica donde se leen los datos, no solo en el middleware.
 - Toda consulta de tarjetas y movimientos filtra por el usuario de la sesión, nunca por un id enviado desde el cliente.
 - Dinero guardado en centavos (enteros), nunca como `float`.
