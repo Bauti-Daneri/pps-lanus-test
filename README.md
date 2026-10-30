@@ -153,7 +153,8 @@ Lo crea el seed. En la base se guarda solo el hash de la contraseña (bcrypt), n
 - **Un solo mapa por tipo de movimiento.** `src/lib/movement-types.ts` define, para `SUS`, `CASH_IN` y `CASH_OUT`, la descripción, el ícono y los colores. Es un `Record` sobre el enum, así que si se agrega un tipo TypeScript obliga a completarlo.
 - **Formatos en `src/lib/format.ts`.** Monto: "$125", o "$95.50" si tiene centavos. Saldo: siempre 2 decimales y separador de miles en formato en-US ("1,234.56"). Vencimiento: "02/30". El monto se muestra sin signo; el color indica si entra o sale plata.
 - **Assets del Figma descargados a `public/icons/`.** No se usan las URLs temporales que entrega Figma. Varios SVG vienen recortados al trazo (por ejemplo, 18×20), así que el componente `Icon` los muestra a su tamaño real centrados en la caja del frame (24 o 28 px). La flecha de "Pago enviado" viene exportada hacia abajo y se gira 180° con CSS. El asset de la insignia USD es solo el fondo con degradé; el texto (la moneda de la tarjeta) se superpone en el código.
-- **La tarjeta mide 348 px de ancho máximo y queda alineada a la izquierda.** Así está en el Figma (x=24). La columna tiene 366 px de contenido, así que la tarjeta es un poco más angosta que las filas. Adentro, cada elemento usa la posición absoluta en px del Figma (por ejemplo, el logo en left 289, top 16). La contra: en pantallas de menos de 396 px de ancho la tarjeta se angosta pero las posiciones no, y el logo y el vencimiento pueden salirse del borde derecho.
+- **La tarjeta mide 348 px de ancho máximo y queda alineada a la izquierda.** Así está en el Figma (x=24). La columna tiene 366 px de contenido, así que la tarjeta es un poco más angosta que las filas. 
+- **La tarjeta escala proporcionalmente.** El contenedor es un *container query* (`container-type: inline-size`) de ancho `min(100%, 348px)`. La tarjeta define `--u: calc(100cqw / 348)` (1/348 de ese ancho) y expresa cada posición, tamaño, radio y tamaño de letra como `calc(var(--u) * N)`, con los N en px del Figma: el logo, por ejemplo, va en `u(289), u(16)`. El alto sale de `aspect-ratio: 348 / 190`. A 348 px, `--u` vale 1px y el resultado es idéntico al diseño; en pantallas más angostas se achica todo junto, sin que nada se salga del borde. La sombra y el borde de 1px no escalan. El esqueleto de `loading.tsx` usa el mismo contenedor, así que no salta al cargar.
 - **`error.tsx` usa `retry()`, no `reset()`.** En Next 16.3+, `retry()` vuelve a pedir los datos y re-renderiza; `reset()` solo re-renderiza, así que un error de la base se repetiría.
 
 ### Planeadas (todavía no implementadas)
@@ -197,7 +198,6 @@ prisma/
 
 - Tests del servicio de movimientos y de las validaciones.
 - Paginación o "cargar más" en la lista de movimientos.
-- Tarjeta responsive en pantallas de menos de 396 px: posiciones relativas al ancho, o escalar la tarjeta completa.
 - Búsqueda que ignore tildes: hoy "jose" no encuentra "José". Se resolvería con la extensión `unaccent` de Postgres o con una columna de nombre normalizado.
 - Cachear el listado con Cache Components de Next 16, con invalidación.
 - Límite de intentos en el login.

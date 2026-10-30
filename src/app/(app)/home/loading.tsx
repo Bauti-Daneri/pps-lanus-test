@@ -1,3 +1,5 @@
+import { CardSkeleton } from "@/components/card-view";
+
 // Esqueleto con las mismas medidas que la Home real, para que no salte al cargar.
 export default function HomeLoading() {
   return (
@@ -13,7 +15,7 @@ export default function HomeLoading() {
         </div>
       </div>
 
-      <div className="h-[190px] w-full max-w-[348px] rounded-3xl bg-border-2" />
+      <CardSkeleton />
 
       <div className="flex flex-col gap-6">
         <div className="h-6 w-48 rounded bg-border-2" />
