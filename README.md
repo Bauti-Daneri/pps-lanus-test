@@ -47,7 +47,7 @@ Web app de billetera para el club, siguiendo el [diseño de Figma](https://www.f
 2. Crear un archivo `.env` en la raíz **antes de instalar** (el script `postinstall` ejecuta `prisma generate`, que lee la configuración):
 
    ```env
-   DATABASE_URL="postgresql://USUARIO:CLAVE@HOST-pooler/neondb?sslmode=require"
+   DATABASE_URL="postgresql://USUARIO:CLAVE@HOST-pooler/neondb?sslmode=verify-full"
    DIRECT_URL="postgresql://USUARIO:CLAVE@HOST/neondb?sslmode=require"
    SESSION_SECRET="CADENA_ALEATORIA_DE_32_O_MAS_CARACTERES"
    ```
