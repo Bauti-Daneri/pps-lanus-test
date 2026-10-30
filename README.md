@@ -5,7 +5,7 @@ Web app de billetera para el club, siguiendo el [diseño de Figma](https://www.f
 - **Deploy:** https://pps-lanus-test.vercel.app
 - **Repositorio:** https://github.com/Bauti-Daneri/pps-lanus-test
 
-> **Estado: en desarrollo.** Hoy están resueltos la infraestructura (repo, deploy, base de datos y migraciones), el login con sesión y los datos de tarjeta y movimientos en el backend. Faltan las pantallas de home y movimientos, y el estilo del Figma. Lo que falta está marcado como `[Pendiente]` en cada sección.
+> **Estado: en desarrollo.** Hoy están resueltos la infraestructura (repo, deploy, base de datos y migraciones), el login con sesión, los datos de tarjeta y movimientos en el backend y la pantalla Home con el estilo del Figma. Faltan la pantalla de movimientos, el estilo del login y la comparación visual contra el Figma. Lo que falta está marcado como `[Pendiente]` en cada sección.
 
 ## Estado del proyecto
 
@@ -13,19 +13,21 @@ Web app de billetera para el club, siguiendo el [diseño de Figma](https://www.f
 - [x] Base PostgreSQL en Neon (región São Paulo)
 - [x] Prisma 7 con el modelo `User` y la migración inicial
 - [X] Seed con el usuario de prueba y contraseña hasheada
-- [x] Login y sesión: login, logout, `/home` protegida y redirecciones del proxy (probado en local; en Vercel falta configurar `SESSION_SECRET`)
-- [x] Datos de tarjeta y movimientos (backend, sin pantallas): modelos `Card` y `Movement`, migración aplicada, seed idempotente y servicio de lectura (verificado con un script contra la base; todavía no lo usa ninguna pantalla)
-- [ ] Home: tarjeta y últimos movimientos
-- [ ] Movimientos: búsqueda por nombre o servicio y filtros rápidos
-- [ ] Estados de carga, error y vacío
-- [ ] Fidelidad al Figma y responsive
+- [x] Login y sesión: login, logout, `/home` protegida y redirecciones del proxy
+- [x] Datos de tarjeta y movimientos (backend): modelos `Card` y `Movement`, migración aplicada, seed idempotente y servicio de lectura
+- [x] Home: saludo, tarjeta, últimos 5 movimientos y barra de navegación, con los datos reales (verificado por HTTP en `npm run dev`)
+- [ ] Movimientos: búsqueda por nombre o servicio y filtros rápidos. **[Pendiente]**: hoy `/movimientos` es una página mínima que dice "Próximamente"
+- [ ] Estados de carga, error y vacío: implementados en Home (`loading.tsx`, `error.tsx`, mensajes de vacío), pero sin probar en pantalla ni con un error forzado
+- [ ] Fidelidad al Figma y responsive: la Home sigue las medidas y tokens del Figma, pero todavía no se comparó visualmente contra el diseño. El login no tiene estilo
+
 
 ## Stack
 
 | Capa | Tecnología |
 | --- | --- |
 | Frontend y backend | Next.js 16 (App Router), React 19, TypeScript |
-| Estilos | Tailwind CSS 4 |
+| Estilos | Tailwind CSS 4 (tokens del Figma en `@theme`) |
+| Tipografías | Plus Jakarta Sans y Roboto Slab con `next/font/google` |
 | Base de datos | PostgreSQL en Neon |
 | ORM | Prisma 7 con `@prisma/adapter-pg` |
 | Deploy | Vercel |
@@ -103,7 +105,8 @@ Lo crea el seed. En la base se guarda solo el hash de la contraseña (bcrypt), n
 | --- | --- |
 | `/` | Redirige a `/home`. |
 | `/login` | Formulario de ingreso. Con sesión activa, el proxy redirige a `/home`. |
-| `/home` | Protegida. Muestra el nombre del usuario y el botón para cerrar sesión. |
+| `/home` | Protegida. Saludo con el nombre, tarjeta, últimos 5 movimientos y barra de navegación (Inicio, Movimientos, Salir). |
+| `/movimientos` | Protegida. **[Pendiente]**: por ahora solo dice "Próximamente"; existe para que la lupa y la barra no lleven a un 404. |
 | `/api/session/clear` | Uso interno: borra la cookie cuando el JWT apunta a un usuario que ya no existe y redirige a `/login`. |
 
 ### Scripts
@@ -144,10 +147,17 @@ Lo crea el seed. En la base se guarda solo el hash de la contraseña (bcrypt), n
 - **Servicio que recibe el `userId` como parámetro.** `src/server/movements.ts` (`getCardForUser`, `getRecentMovements`, `searchMovements`) filtra siempre por el `userId` que recibe. Quien lo llama lo obtiene de `verifySession()` en `src/lib/dal.ts`, nunca de un dato enviado por el cliente. Devuelve solo los campos que necesita la UI.
 - **Búsqueda acotada y literal.** `q` se recorta y se limita a 50 caracteres, y busca con `contains` sin distinguir mayúsculas sobre el nombre. Prisma no escapa los comodines de `ILIKE` (se comprobó: `%` y `_` matcheaban todo), así que el servicio escapa `%`, `_` y `\` para que se busquen como texto. `type` solo filtra si es exactamente `SUS`, `CASH_IN` o `CASH_OUT`; cualquier otro valor se ignora.
 - **Migraciones aditivas.** La base de Neon es la misma para local y producción, así que cada migración solo agrega (tablas, tipos, índices) y se aplica con `prisma migrate deploy`, que nunca resetea la base.
+- **Capas: Server Component → servicio (`src/server`) → Prisma.** La Home obtiene el `userId` con `verifySession()` y pide nombre, tarjeta y movimientos en paralelo.
+- **Tokens del Figma en `globals.css` con `@theme` de Tailwind 4.** Colores (`surface-1`, `granate`, `info`, `warning`, tintes al 15%, etc.), tamaños de texto (`text-display`, `text-title`, `text-body`, `text-detail`, `text-card`) y sombras. Se usan como clases (`bg-granate`, `text-display`) sin instalar nada extra. Se quitó el modo oscuro de la plantilla: el diseño es solo claro.
+- **Route group `(app)` para las pantallas con sesión.** Su layout arma la columna de 414 px y la barra de navegación inferior. `/login` queda afuera, sin barra. Los paréntesis no cambian la URL.
+- **Un solo mapa por tipo de movimiento.** `src/lib/movement-types.ts` define, para `SUS`, `CASH_IN` y `CASH_OUT`, la descripción, el ícono y los colores. Es un `Record` sobre el enum, así que si se agrega un tipo TypeScript obliga a completarlo.
+- **Formatos en `src/lib/format.ts`.** Monto: "$125", o "$95.50" si tiene centavos. Saldo: siempre 2 decimales y separador de miles en formato en-US ("1,234.56"). Vencimiento: "02/30". El monto se muestra sin signo; el color indica si entra o sale plata.
+- **Assets del Figma descargados a `public/icons/`.** No se usan las URLs temporales que entrega Figma. Varios SVG vienen recortados al trazo (por ejemplo, 18×20), así que el componente `Icon` los muestra a su tamaño real centrados en la caja del frame (24 o 28 px). La flecha de "Pago enviado" viene exportada hacia abajo y se gira 180° con CSS. El asset de la insignia USD es solo el fondo con degradé; el texto (la moneda de la tarjeta) se superpone en el código.
+- **La tarjeta mide 348 px de ancho máximo y queda alineada a la izquierda.** Así está en el Figma (x=24). La columna tiene 366 px de contenido, así que la tarjeta es un poco más angosta que las filas. Adentro, cada elemento usa la posición absoluta en px del Figma (por ejemplo, el logo en left 289, top 16). La contra: en pantallas de menos de 396 px de ancho la tarjeta se angosta pero las posiciones no, y el logo y el vencimiento pueden salirse del borde derecho.
+- **`error.tsx` usa `retry()`, no `reset()`.** En Next 16.3+, `retry()` vuelve a pedir los datos y re-renderiza; `reset()` solo re-renderiza, así que un error de la base se repetiría.
 
 ### Planeadas (todavía no implementadas)
 
-- Capas: Server Component → servicio (`src/server`) → Prisma.
 - Búsqueda y filtros en el servidor, con parámetros en la URL (`?q=`), para que sobrevivan a un refresh.
 
 ### Estructura prevista
@@ -155,12 +165,16 @@ Lo crea el seed. En la base se guarda solo el hash de la contraseña (bcrypt), n
 ```
 src/
   app/                  # rutas, loading.tsx, error.tsx, not-found.tsx
+    (app)/              # pantallas con sesión: layout con la barra, home/, movimientos/
     actions/            # Server Actions (login, logout)
-  components/           # UI reutilizable y componentes de movimientos
-  lib/                  # cliente de Prisma, sesión (JWT y cookie), DAL
+    login/              # fuera del grupo (app): sin barra de navegación
+  components/           # CardView, MovementRow/MovementList, BottomNav, Icon
+  lib/                  # cliente de Prisma, sesión (JWT y cookie), DAL, formatos, mapa de tipos
   server/               # servicios de acceso a datos (movements.ts: tarjeta y movimientos)
   proxy.ts              # redirecciones según la sesión (solo comodidad)
   generated/prisma/     # cliente generado (ignorado por Git)
+public/
+  icons/                # SVG exportados del Figma
 prisma/
   schema.prisma
   migrations/
@@ -183,6 +197,7 @@ prisma/
 
 - Tests del servicio de movimientos y de las validaciones.
 - Paginación o "cargar más" en la lista de movimientos.
+- Tarjeta responsive en pantallas de menos de 396 px: posiciones relativas al ancho, o escalar la tarjeta completa.
 - Búsqueda que ignore tildes: hoy "jose" no encuentra "José". Se resolvería con la extensión `unaccent` de Postgres o con una columna de nombre normalizado.
 - Cachear el listado con Cache Components de Next 16, con invalidación.
 - Límite de intentos en el login.

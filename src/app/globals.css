@@ -1,26 +1,47 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+/* Tokens del Figma. Cada --color-x genera bg-x, text-x, border-x, etc. */
+@theme {
+  --color-surface-1: #f1f2f5;
+  --color-surface-3: #ffffff;
+  --color-border-1: rgba(209, 213, 219, 0.4);
+  --color-border-2: #d1d5db;
+  --color-text-primary: #181c23;
+  --color-text-medium: #6b7280;
+  --color-granate: #7a1d2d;
+  --color-info: #2f5d9f;
+  --color-warning: #f2c94c;
+
+  /* Fondos de los íconos de movimiento: el color de marca al 15%. */
+  --color-granate-tint: rgba(122, 29, 45, 0.15);
+  --color-info-tint: rgba(47, 93, 159, 0.15);
+  --color-warning-tint: rgba(242, 201, 76, 0.15);
+
+  /* Tipografía: text-display / text-title en Roboto Slab, el resto en Plus
+     Jakarta Sans con line-height 1.25. */
+  --text-display: 24px;
+  --text-display--line-height: 1.175;
+  --text-title: 20px;
+  --text-title--line-height: 1.175;
+  --text-body: 14px;
+  --text-body--line-height: 1.25;
+  --text-detail: 12px;
+  --text-detail--line-height: 1.25;
+  --text-card: 22px;
+  --text-card--line-height: 28px;
+
+  --shadow-card: 0 8px 30px rgba(0, 0, 0, 0.06);
+  --shadow-nav: 0 -4px 8px rgba(0, 0, 0, 0.06);
 }
 
+/* Las fuentes vienen de next/font como variables CSS en <html>; `inline` hace
+   que Tailwind use la variable en lugar de copiar su valor. */
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --font-sans: var(--font-plus-jakarta-sans);
+  --font-display: var(--font-roboto-slab);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--color-surface-1);
+  color: var(--color-text-primary);
 }
