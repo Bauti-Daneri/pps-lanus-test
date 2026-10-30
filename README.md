@@ -5,7 +5,7 @@ Web app de billetera para el club, siguiendo el [diseño de Figma](https://www.f
 - **Deploy:** https://pps-lanus-test.vercel.app
 - **Repositorio:** https://github.com/Bauti-Daneri/pps-lanus-test
 
-> **Estado: en desarrollo.** Hoy están resueltos la infraestructura (repo, deploy, base de datos y migraciones), el login con sesión, los datos de tarjeta y movimientos en el backend y la pantalla Home con el estilo del Figma. Faltan la pantalla de movimientos, el estilo del login y la comparación visual contra el Figma. Lo que falta está marcado como `[Pendiente]` en cada sección.
+> **Estado: en desarrollo.** Hoy están resueltos la infraestructura (repo, deploy, base de datos y migraciones), el login con sesión, los datos de tarjeta y movimientos en el backend y las pantallas Home y Movimientos con el estilo del Figma. Faltan el estilo del login y la comparación visual contra el Figma. Lo que falta está marcado como `[Pendiente]` en cada sección.
 
 ## Estado del proyecto
 
@@ -16,8 +16,8 @@ Web app de billetera para el club, siguiendo el [diseño de Figma](https://www.f
 - [x] Login y sesión: login, logout, `/home` protegida y redirecciones del proxy
 - [x] Datos de tarjeta y movimientos (backend): modelos `Card` y `Movement`, migración aplicada, seed idempotente y servicio de lectura
 - [x] Home: saludo, tarjeta, últimos 5 movimientos y barra de navegación, con los datos reales (verificado por HTTP en `npm run dev`)
-- [ ] Movimientos: búsqueda por nombre o servicio y filtros rápidos. **[Pendiente]**: hoy `/movimientos` es una página mínima que dice "Próximamente"
-- [ ] Estados de carga, error y vacío: implementados en Home (`loading.tsx`, `error.tsx`, mensajes de vacío), pero sin probar en pantalla ni con un error forzado
+- [x] Movimientos: búsqueda por nombre y filtros rápidos por tipo, con estado en la URL (verificado por HTTP en `npm run dev` con datos reales; el debounce, la opacidad y la sincronización del input no se probaron en un navegador)
+- [ ] Estados de carga, error y vacío: implementados en Home y Movimientos (`loading.tsx` por pantalla, un `error.tsx` compartido, vacío total y vacío por filtros). Con la base caída se confirmó que el servidor deriva el error a `(app)/error.tsx`, pero no se vio en pantalla
 - [ ] Fidelidad al Figma y responsive: la Home sigue las medidas y tokens del Figma, pero todavía no se comparó visualmente contra el diseño. El login no tiene estilo
 
 
@@ -106,7 +106,7 @@ Lo crea el seed. En la base se guarda solo el hash de la contraseña (bcrypt), n
 | `/` | Redirige a `/home`. |
 | `/login` | Formulario de ingreso. Con sesión activa, el proxy redirige a `/home`. |
 | `/home` | Protegida. Saludo con el nombre, tarjeta, últimos 5 movimientos y barra de navegación (Inicio, Movimientos, Salir). |
-| `/movimientos` | Protegida. **[Pendiente]**: por ahora solo dice "Próximamente"; existe para que la lupa y la barra no lleven a un 404. |
+| `/movimientos` | Protegida. Buscador por nombre y pestañas por tipo. Acepta `?q=<texto>` y `?type=SUS\|CASH_IN\|CASH_OUT`; un `type` inválido se ignora. |
 | `/api/session/clear` | Uso interno: borra la cookie cuando el JWT apunta a un usuario que ya no existe y redirige a `/login`. |
 
 ### Scripts
@@ -155,11 +155,17 @@ Lo crea el seed. En la base se guarda solo el hash de la contraseña (bcrypt), n
 - **Assets del Figma descargados a `public/icons/`.** No se usan las URLs temporales que entrega Figma. Varios SVG vienen recortados al trazo (por ejemplo, 18×20), así que el componente `Icon` los muestra a su tamaño real centrados en la caja del frame (24 o 28 px). La flecha de "Pago enviado" viene exportada hacia abajo y se gira 180° con CSS. El asset de la insignia USD es solo el fondo con degradé; el texto (la moneda de la tarjeta) se superpone en el código.
 - **La tarjeta mide 348 px de ancho máximo y queda alineada a la izquierda.** Así está en el Figma (x=24). La columna tiene 366 px de contenido, así que la tarjeta es un poco más angosta que las filas. 
 - **La tarjeta escala proporcionalmente.** El contenedor es un *container query* (`container-type: inline-size`) de ancho `min(100%, 348px)`. La tarjeta define `--u: calc(100cqw / 348)` (1/348 de ese ancho) y expresa cada posición, tamaño, radio y tamaño de letra como `calc(var(--u) * N)`, con los N en px del Figma: el logo, por ejemplo, va en `u(289), u(16)`. El alto sale de `aspect-ratio: 348 / 190`. A 348 px, `--u` vale 1px y el resultado es idéntico al diseño; en pantallas más angostas se achica todo junto, sin que nada se salga del borde. La sombra y el borde de 1px no escalan. El esqueleto de `loading.tsx` usa el mismo contenedor, así que no salta al cargar.
-- **`error.tsx` usa `retry()`, no `reset()`.** En Next 16.3+, `retry()` vuelve a pedir los datos y re-renderiza; `reset()` solo re-renderiza, así que un error de la base se repetiría.
+- **Un solo `error.tsx`, en `(app)/`, y usa `retry()`, no `reset()`.** Al estar junto al layout del grupo atrapa los errores de Home y de Movimientos y deja visible la barra. En Next 16.3+, `retry()` vuelve a pedir los datos y re-renderiza; `reset()` solo re-renderiza, así que un error de la base se repetiría.
+- **El estado de Movimientos vive en la URL.** `?q=` y `?type=` sobreviven a un refresh, se pueden compartir y el Server Component los lee de `searchParams` (una Promise en Next 16). El filtrado lo hace `searchMovements` en el servidor; la página no agrega lógica propia.
+- **Buscador con debounce y `router.replace`.** El input (`src/components/movement-search.tsx`) actualiza `?q=` 300 ms después de la última tecla, o enseguida con Enter, sin recargar la página. Usa `replace`, así escribir no llena el historial. Si el valor recortado ya es el `q` de la URL, no navega. Conserva `type` leyendo la URL en el momento de navegar. Sin JS, el form hace un GET normal y la búsqueda igual funciona.
+- **Input y URL sincronizados sin bucles.** Si `q` cambia desde afuera ("Limpiar filtros", botón atrás), el input lo adopta. Si el cambio es la búsqueda que pidió el propio input, no lo toca, para no pisar lo que el usuario siguió escribiendo. El ajuste se hace durante el render, sin efectos, y nunca vuelve a escribir la URL.
+- **Opacidad mientras busca.** El input y la lista comparten un `useTransition` por contexto (están separados por las pestañas). La lista baja al 50% mientras la navegación está pendiente.
+- **Pestañas como links.** "Todos" más una por tipo, con la etiqueta (`filterLabel`) tomada del mapa central `movement-types.ts`. Cada `<Link>` conserva `q`, y la activa sale de la URL y lleva `aria-current="true"`. Las inactivas tienen borde transparente, para medir lo mismo que la activa y que la fila no salte. La fila se desplaza horizontalmente sin barra visible.
+- **Largo máximo de búsqueda en un solo lugar.** `MAX_QUERY_LENGTH = 50` (`src/lib/search.ts`) lo usan el servicio, que recorta, y el input (`maxLength`).
+- **Roboto Slab en lugar de Rockwell** en el buscador, porque Rockwell no está en Google Fonts. El placeholder dice "Search..." como en el Figma.
 
 ### Planeadas (todavía no implementadas)
 
-- Búsqueda y filtros en el servidor, con parámetros en la URL (`?q=`), para que sobrevivan a un refresh.
 
 ### Estructura prevista
 
@@ -169,7 +175,7 @@ src/
     (app)/              # pantallas con sesión: layout con la barra, home/, movimientos/
     actions/            # Server Actions (login, logout)
     login/              # fuera del grupo (app): sin barra de navegación
-  components/           # CardView, MovementRow/MovementList, BottomNav, Icon
+  components/           # CardView, MovementRow/MovementList, MovementFilters, SearchInput, BottomNav, Icon
   lib/                  # cliente de Prisma, sesión (JWT y cookie), DAL, formatos, mapa de tipos
   server/               # servicios de acceso a datos (movements.ts: tarjeta y movimientos)
   proxy.ts              # redirecciones según la sesión (solo comodidad)

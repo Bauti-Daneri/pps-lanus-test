@@ -1,11 +1,10 @@
 import "server-only";
 import { prisma } from "@/lib/prisma";
 import { MovementType, type Prisma } from "@/generated/prisma/client";
+import { MAX_QUERY_LENGTH } from "@/lib/search";
 
 // Todas las funciones reciben el userId de quien llama, que lo obtiene de
 // verifySession() en src/lib/dal.ts. Nunca de un dato enviado por el cliente.
-
-const MAX_QUERY_LENGTH = 50;
 
 const cardSelect = {
   brand: true,

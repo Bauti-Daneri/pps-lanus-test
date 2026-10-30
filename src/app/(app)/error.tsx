@@ -2,9 +2,11 @@
 
 import { useEffect } from "react";
 
+// Atrapa los errores de todas las páginas del grupo (Home y Movimientos). Está
+// junto al layout, así que la barra de navegación sigue visible.
 // `retry` (estable desde Next 16.3) vuelve a pedir los datos y re-renderiza;
 // `reset` solo re-renderiza sin volver a pedirlos.
-export default function HomeError({
+export default function AppError({
   error,
   retry,
 }: {

@@ -24,6 +24,20 @@ export function MovementRow({ movement }: { movement: MovementItem }) {
   );
 }
 
+// Misma caja que MovementRow, para los loading.tsx de Home y Movimientos.
+export function MovementRowSkeleton() {
+  return (
+    <li className="flex h-[76px] items-center gap-4 rounded-2xl border border-border-1 bg-surface-3 p-4">
+      <div className="size-11 shrink-0 rounded-xl bg-border-2" />
+      <div className="flex flex-1 flex-col gap-0.5">
+        <div className="h-[18px] w-28 rounded bg-border-2" />
+        <div className="h-[15px] w-20 rounded bg-border-2" />
+      </div>
+      <div className="h-[18px] w-12 rounded bg-border-2" />
+    </li>
+  );
+}
+
 export function MovementList({ movements }: { movements: MovementItem[] }) {
   if (movements.length === 0) {
     return (
