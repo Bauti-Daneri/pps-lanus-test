@@ -5,7 +5,7 @@ Web app de billetera para el club, siguiendo el [diseño de Figma](https://www.f
 - **Deploy:** https://pps-lanus-test.vercel.app
 - **Repositorio:** https://github.com/Bauti-Daneri/pps-lanus-test
 
-> **Estado: en desarrollo.** Hoy están resueltos la infraestructura (repo, deploy, base de datos y migraciones), el login con sesión, los datos de tarjeta y movimientos en el backend y las pantallas Login, Home y Movimientos con el estilo del Figma. Faltan la comparación visual contra el Figma y el comportamiento de "Recordarme". Lo que falta está marcado como `[Pendiente]` en cada sección.
+> **Estado: en desarrollo.** Hoy están resueltos la infraestructura (repo, deploy, base de datos y migraciones), el login con sesión, los datos de tarjeta y movimientos en el backend y las pantallas Login, Home y Movimientos con el estilo del Figma. Falta la comparación visual contra el Figma. Lo que falta está marcado como `[Pendiente]` en cada sección.
 
 ## Estado del proyecto
 
@@ -13,13 +13,12 @@ Web app de billetera para el club, siguiendo el [diseño de Figma](https://www.f
 - [x] Base PostgreSQL en Neon (región São Paulo)
 - [x] Prisma 7 con el modelo `User` y la migración inicial
 - [X] Seed con el usuario de prueba y contraseña hasheada
-- [x] Login y sesión: login, logout, `/home` protegida y redirecciones del proxy
+- [x] Login y sesión: login, logout, "Recordarme" (sesión de 30 días o de navegador), `/home` protegida y redirecciones del proxy
 - [x] Datos de tarjeta y movimientos (backend): modelos `Card` y `Movement`, migración aplicada, seed idempotente y servicio de lectura
 - [x] Home: saludo, tarjeta, últimos 5 movimientos y barra de navegación, con los datos reales (verificado por HTTP en `npm run dev`)
 - [x] Movimientos: búsqueda por nombre y filtros rápidos por tipo, con estado en la URL (verificado por HTTP en `npm run dev` con datos reales; el debounce, la opacidad y la sincronización del input no se probaron en un navegador)
 - [ ] Estados de carga, error y vacío: implementados en Home y Movimientos (`loading.tsx` por pantalla, un `error.tsx` compartido, vacío total y vacío por filtros). Con la base caída se confirmó que el servidor deriva el error a `(app)/error.tsx`, pero no se vio en pantalla
 - [ ] Fidelidad al Figma y responsive: Login, Home y Movimientos siguen las medidas y tokens del Figma, pero todavía no se compararon visualmente contra el diseño
-- [ ] "Recordarme" en el login. **[Pendiente]**: hoy es solo visual (`name="remember"`); la action `login` no lo lee y la sesión dura 7 días siempre
 
 
 ## Stack
@@ -52,7 +51,7 @@ Web app de billetera para el club, siguiendo el [diseño de Figma](https://www.f
    SESSION_SECRET="CADENA_ALEATORIA_DE_32_O_MAS_CARACTERES"
    ```
 
-   - `DATABASE_URL`: conexión *pooled*, la que usa la app.
+   - `DATABASE_URL`: conexión *pooled*, la que usa la app. Se usa verify-full explícito para evitar un aviso de seguridad de la librería pg. Es el comportamiento que require ya tiene hoy. DIRECT_URL queda en require, porque la usan las migraciones de Prisma.
    - `DIRECT_URL`: conexión directa, la que usan las migraciones.
    - Con una base local, las dos pueden ser la misma URL.
    - `SESSION_SECRET`: clave con la que se firman los JWT de sesión. Mínimo 32 caracteres. Sin ella la app (y el build) fallan con un error explícito. Se genera con:
@@ -105,7 +104,7 @@ Lo crea el seed. En la base se guarda solo el hash de la contraseña (bcrypt), n
 | Ruta | Qué hace |
 | --- | --- |
 | `/` | Redirige a `/home`. |
-| `/login` | Logo y formulario de ingreso (email, contraseña con botón para mostrarla, "Recordarme" solo visual). Sin barra de navegación. Con sesión activa, el proxy redirige a `/home`. |
+| `/login` | Logo y formulario de ingreso (email, contraseña con botón para mostrarla y "Recordarme"). Sin barra de navegación. Con sesión activa, el proxy redirige a `/home`. |
 | `/home` | Protegida. Saludo con el nombre, tarjeta, últimos 5 movimientos y barra de navegación (Inicio, Movimientos, Salir). |
 | `/movimientos` | Protegida. Buscador por nombre y pestañas por tipo. Acepta `?q=<texto>` y `?type=SUS\|CASH_IN\|CASH_OUT`; un `type` inválido se ignora. |
 | `/api/session/clear` | Uso interno: borra la cookie cuando el JWT apunta a un usuario que ya no existe y redirige a `/login`. |
@@ -131,7 +130,7 @@ Lo crea el seed. En la base se guarda solo el hash de la contraseña (bcrypt), n
 - **Un único cliente de Prisma para la app.** `src/lib/prisma.ts` crea el cliente con `@prisma/adapter-pg` y `DATABASE_URL`, y en desarrollo lo guarda en `globalThis` para que el hot reload no abra un pool de conexiones nuevo en cada recarga.
 - **Contraseñas hasheadas con `bcryptjs`.** Es JavaScript puro: no necesita compilar binarios nativos en Windows ni en Vercel, a diferencia de `bcrypt` o `argon2`.
 - **El seed usa la conexión *pooled*.** Solo hace consultas comunes (no cambia el esquema), así que usa la misma cadena que la app. Tiene su propio cliente en lugar de importar `src/lib/prisma.ts`, para no mezclar el script de CLI con el código de la app.
-- **Sesión sin estado con JWT en cookie.** `src/lib/session.ts` firma un JWT con `jose` (HS256, `SESSION_SECRET`, vence a los 7 días) y lo guarda en la cookie `session`: `httpOnly`, `Secure` solo en producción, `SameSite=Lax`, `path=/` y la misma expiración que el JWT. La verificación exige `algorithms: ["HS256"]` explícito. El archivo importa `server-only` para que el build falle si alguien lo importa desde el navegador.
+- **Sesión sin estado con JWT en cookie.** `src/lib/session.ts` firma un JWT con `jose` (HS256, `SESSION_SECRET`) y lo guarda en la cookie `session`: `httpOnly`, `Secure` solo en producción, `SameSite=Lax` y `path=/`. La duración depende de "Recordarme" (ver más abajo). La verificación exige `algorithms: ["HS256"]` explícito. El archivo importa `server-only` para que el build falle si alguien lo importa desde el navegador.
 - **El JWT lleva solo el id del usuario.** Va en `sub`. El nombre y cualquier otro dato se leen de la base con ese id, así no quedan datos viejos en la cookie y un usuario borrado deja de tener acceso aunque su JWT siga vigente.
 - **Login y logout como Server Actions.** `src/app/actions/auth.ts`. El formulario usa `useActionState` para mostrar el error y deshabilitar el botón mientras envía. Los campos se validan dentro de la acción, no solo en el HTML.
 - **Un único mensaje de error: "Credenciales inválidas".** Se usa para email inexistente, contraseña incorrecta y datos mal formados. Si el email no existe, igual se corre `bcrypt.compare` contra un hash precalculado de costo 10, para que la respuesta tarde lo mismo y no se pueda averiguar qué emails están registrados midiendo tiempos.
@@ -168,7 +167,10 @@ Lo crea el seed. En la base se guarda solo el hash de la contraseña (bcrypt), n
 - **Botón para mostrar la contraseña.** Alterna `type="password"`/`"text"`, con etiqueta fija ("Mostrar contraseña") y `aria-pressed`. El Figma solo trae el ícono de "oculta" (`visibility_off`, Material Symbols Rounded); el de "visible" es su par de la misma familia (`visibility`, licencia Apache 2.0), dibujado a mano con el mismo gris y comparado lado a lado: mismo contorno (y=4 a 19), centro y grosor.
 - **Rojo de error `danger` (`#B42318`).** El Figma no define un rojo. Contraste de ~6.5:1 sobre blanco y ~5.8:1 sobre el fondo gris. Es más vivo que el granate, así el borde de error no se confunde con el de foco. Con error, los inputs llevan `aria-invalid`, `aria-describedby` hacia el mensaje (`role="alert"`) y borde rojo hasta el próximo envío.
 - **Desviación del Figma: tilde blanca en "Recordarme".** El Figma solo dice "granate al marcar". Una caja granate lisa no se lee claramente como marcada, así que se agregó una tilde blanca encima.
-- **"Recordarme" es solo visual por ahora.** El checkbox se envía como `remember`, pero la action `login` no lo lee: la sesión dura 7 días esté marcado o no.
+- **Dos duraciones de sesión según "Recordarme".** La action `login` lee `remember` y solo `"on"` cuenta como marcado.
+  - **Marcado:** cookie persistente con `Max-Age` de 30 días (Next agrega también un `Expires` equivalente) y JWT que vence a los 30 días.
+  - **Sin marcar:** cookie de sesión del navegador, sin `Max-Age` ni `Expires`, y JWT que vence a las 24 horas. Algunos navegadores restauran las cookies de sesión al reabrirse; el vencimiento del JWT asegura que el token muera igual.
+  - `iat` y `exp` salen del mismo instante, así que `exp − iat` es exactamente la duración. `verifySession` y el proxy no cambiaron: siguen validando firma y vencimiento.
 - **Avisos de `next/image` corregidos en el origen.** Next avisa "width or height modified" cuando solo uno de los dos tamaños renderizados (enteros) difiere de su atributo. Las flechas medían 19.798×20, así que siempre avisaban; ahora usan una caja de 20×20 con `object-contain` y el dibujo sigue en 19.798×20. Los íconos de la barra y el escudo del login usan `loading="eager"`, porque pueden ser el elemento más grande al cargar (LCP).
 
 ### Planeadas (todavía no implementadas)
@@ -214,7 +216,6 @@ prisma/
 - Búsqueda que ignore tildes: hoy "jose" no encuentra "José". Se resolvería con la extensión `unaccent` de Postgres o con una columna de nombre normalizado.
 - Cachear el listado con Cache Components de Next 16, con invalidación.
 - Límite de intentos en el login.
-- Comportamiento de "Recordarme": sesión corta (cookie de sesión) si no está marcado y de 7 días si lo está.
 - Migrar a Prisma 8 cuando su documentación se estabilice.
 - Integración continua (lint y build en cada pull request).
 - Auditoría de accesibilidad.

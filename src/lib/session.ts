@@ -12,19 +12,25 @@ if (secret.length < 32) {
 const key = new TextEncoder().encode(secret);
 
 export const SESSION_COOKIE_NAME = "session";
-const SESSION_DURATION_MS = 7 * 24 * 60 * 60 * 1000;
+// "Recordarme" marcado: cookie persistente y JWT de 30 días.
+const REMEMBER_SECONDS = 30 * 24 * 60 * 60;
+// Sin marcar: cookie de sesión del navegador y JWT de 24 horas, para que el
+// token venza aunque el navegador restaure la cookie al reabrirse.
+const SESSION_SECONDS = 24 * 60 * 60;
 
 export type Session = { userId: string };
 
 // Guarda en la cookie un JWT firmado que solo lleva el id del usuario (en
 // `sub`). El resto de los datos se leen de la base cuando se necesitan.
-export async function createSession(userId: string) {
-  const expiresAt = new Date(Date.now() + SESSION_DURATION_MS);
+export async function createSession(userId: string, remember: boolean) {
+  const duration = remember ? REMEMBER_SECONDS : SESSION_SECONDS;
+  // Un solo instante para iat y exp: exp - iat es exactamente `duration`.
+  const issuedAt = Math.floor(Date.now() / 1000);
   const token = await new SignJWT({})
     .setProtectedHeader({ alg: "HS256" })
     .setSubject(userId)
-    .setIssuedAt()
-    .setExpirationTime(expiresAt)
+    .setIssuedAt(issuedAt)
+    .setExpirationTime(issuedAt + duration)
     .sign(key);
 
   const cookieStore = await cookies();
@@ -33,7 +39,9 @@ export async function createSession(userId: string) {
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
     path: "/",
-    expires: expiresAt,
+    // Sin maxAge la cookie es de sesión (el navegador la borra al cerrarse).
+    // Con maxAge, Next agrega también un Expires equivalente.
+    ...(remember && { maxAge: REMEMBER_SECONDS }),
   });
 }
 

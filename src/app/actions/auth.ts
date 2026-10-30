@@ -54,7 +54,10 @@ export async function login(
     return INVALID_CREDENTIALS;
   }
 
-  await createSession(user.id);
+  // El checkbox sin `value` envía "on"; cualquier otro valor o su ausencia es
+  // "no marcado".
+  const remember = formData.get("remember") === "on";
+  await createSession(user.id, remember);
   redirect("/home");
 }
 
