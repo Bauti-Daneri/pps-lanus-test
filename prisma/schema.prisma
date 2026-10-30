@@ -12,10 +12,51 @@ datasource db {
   provider = "postgresql"
 }
 
+enum MovementType {
+  SUS
+  CASH_IN
+  CASH_OUT
+}
+
+enum CardBrand {
+  MASTERCARD
+  VISA
+}
+
 model User {
-  id           String   @id @default(cuid())
-  email        String   @unique
+  id           String     @id @default(cuid())
+  email        String     @unique
   name         String
   passwordHash String
-  createdAt    DateTime @default(now())
+  createdAt    DateTime   @default(now())
+  card         Card?
+  movements    Movement[]
+}
+
+// Dinero siempre en centavos (Int), nunca Float.
+model Card {
+  id           String    @id @default(cuid())
+  userId       String    @unique
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  brand        CardBrand
+  last4        String
+  holderName   String
+  expMonth     Int
+  expYear      Int
+  currency     String    @default("USD")
+  balanceCents Int
+}
+
+// amountCents es siempre positivo (CHECK en la migración); el signo y la
+// descripción se derivan de `type` en la UI.
+model Movement {
+  id          String       @id @default(cuid())
+  userId      String
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type        MovementType
+  name        String
+  amountCents Int
+  occurredAt  DateTime
+
+  @@index([userId, occurredAt(sort: Desc)])
 }
