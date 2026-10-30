@@ -19,7 +19,9 @@ const INPUT =
 export function LoginForm() {
   const [state, action, pending] = useActionState(login, undefined);
   const [showPassword, setShowPassword] = useState(false);
-  const invalid = Boolean(state?.error);
+  // Solo un error de credenciales marca los campos; si falló el servicio, los
+  // datos ingresados no son el problema.
+  const invalid = state?.kind === "credentials";
   const errorProps = invalid
     ? { "aria-invalid": true, "aria-describedby": ERROR_ID }
     : {};
