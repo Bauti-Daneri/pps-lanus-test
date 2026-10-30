@@ -5,7 +5,7 @@ Web app de billetera para el club, siguiendo el [diseño de Figma](https://www.f
 - **Deploy:** https://pps-lanus-test.vercel.app
 - **Repositorio:** https://github.com/Bauti-Daneri/pps-lanus-test
 
-> **Estado: en desarrollo.** Hoy están resueltos la infraestructura (repo, deploy, base de datos y migraciones), el login con sesión, los datos de tarjeta y movimientos en el backend y las pantallas Home y Movimientos con el estilo del Figma. Faltan el estilo del login y la comparación visual contra el Figma. Lo que falta está marcado como `[Pendiente]` en cada sección.
+> **Estado: en desarrollo.** Hoy están resueltos la infraestructura (repo, deploy, base de datos y migraciones), el login con sesión, los datos de tarjeta y movimientos en el backend y las pantallas Login, Home y Movimientos con el estilo del Figma. Faltan la comparación visual contra el Figma y el comportamiento de "Recordarme". Lo que falta está marcado como `[Pendiente]` en cada sección.
 
 ## Estado del proyecto
 
@@ -18,7 +18,8 @@ Web app de billetera para el club, siguiendo el [diseño de Figma](https://www.f
 - [x] Home: saludo, tarjeta, últimos 5 movimientos y barra de navegación, con los datos reales (verificado por HTTP en `npm run dev`)
 - [x] Movimientos: búsqueda por nombre y filtros rápidos por tipo, con estado en la URL (verificado por HTTP en `npm run dev` con datos reales; el debounce, la opacidad y la sincronización del input no se probaron en un navegador)
 - [ ] Estados de carga, error y vacío: implementados en Home y Movimientos (`loading.tsx` por pantalla, un `error.tsx` compartido, vacío total y vacío por filtros). Con la base caída se confirmó que el servidor deriva el error a `(app)/error.tsx`, pero no se vio en pantalla
-- [ ] Fidelidad al Figma y responsive: la Home sigue las medidas y tokens del Figma, pero todavía no se comparó visualmente contra el diseño. El login no tiene estilo
+- [ ] Fidelidad al Figma y responsive: Login, Home y Movimientos siguen las medidas y tokens del Figma, pero todavía no se compararon visualmente contra el diseño
+- [ ] "Recordarme" en el login. **[Pendiente]**: hoy es solo visual (`name="remember"`); la action `login` no lo lee y la sesión dura 7 días siempre
 
 
 ## Stack
@@ -104,7 +105,7 @@ Lo crea el seed. En la base se guarda solo el hash de la contraseña (bcrypt), n
 | Ruta | Qué hace |
 | --- | --- |
 | `/` | Redirige a `/home`. |
-| `/login` | Formulario de ingreso. Con sesión activa, el proxy redirige a `/home`. |
+| `/login` | Logo y formulario de ingreso (email, contraseña con botón para mostrarla, "Recordarme" solo visual). Sin barra de navegación. Con sesión activa, el proxy redirige a `/home`. |
 | `/home` | Protegida. Saludo con el nombre, tarjeta, últimos 5 movimientos y barra de navegación (Inicio, Movimientos, Salir). |
 | `/movimientos` | Protegida. Buscador por nombre y pestañas por tipo. Acepta `?q=<texto>` y `?type=SUS\|CASH_IN\|CASH_OUT`; un `type` inválido se ignora. |
 | `/api/session/clear` | Uso interno: borra la cookie cuando el JWT apunta a un usuario que ya no existe y redirige a `/login`. |
@@ -163,6 +164,12 @@ Lo crea el seed. En la base se guarda solo el hash de la contraseña (bcrypt), n
 - **Pestañas como links.** "Todos" más una por tipo, con la etiqueta (`filterLabel`) tomada del mapa central `movement-types.ts`. Cada `<Link>` conserva `q`, y la activa sale de la URL y lleva `aria-current="true"`. Las inactivas tienen borde transparente, para medir lo mismo que la activa y que la fila no salte. La fila se desplaza horizontalmente sin barra visible.
 - **Largo máximo de búsqueda en un solo lugar.** `MAX_QUERY_LENGTH = 50` (`src/lib/search.ts`) lo usan el servicio, que recorta, y el input (`maxLength`).
 - **Roboto Slab en lugar de Rockwell** en el buscador, porque Rockwell no está en Google Fonts. El placeholder dice "Search..." como en el Figma.
+- **Login: solo cambió la capa visual.** `session.ts`, la action `login` y el proxy no se tocaron. Los placeholders del Figma ("Placeholder") se reemplazaron por "nombre@correo.com" y "Tu contraseña". El email usa `autocomplete="username"`, como recomiendan los gestores de contraseñas para el usuario de un login.
+- **Botón para mostrar la contraseña.** Alterna `type="password"`/`"text"`, con etiqueta fija ("Mostrar contraseña") y `aria-pressed`. El Figma solo trae el ícono de "oculta" (`visibility_off`, Material Symbols Rounded); el de "visible" es su par de la misma familia (`visibility`, licencia Apache 2.0), dibujado a mano con el mismo gris y comparado lado a lado: mismo contorno (y=4 a 19), centro y grosor.
+- **Rojo de error `danger` (`#B42318`).** El Figma no define un rojo. Contraste de ~6.5:1 sobre blanco y ~5.8:1 sobre el fondo gris. Es más vivo que el granate, así el borde de error no se confunde con el de foco. Con error, los inputs llevan `aria-invalid`, `aria-describedby` hacia el mensaje (`role="alert"`) y borde rojo hasta el próximo envío.
+- **Desviación del Figma: tilde blanca en "Recordarme".** El Figma solo dice "granate al marcar". Una caja granate lisa no se lee claramente como marcada, así que se agregó una tilde blanca encima.
+- **"Recordarme" es solo visual por ahora.** El checkbox se envía como `remember`, pero la action `login` no lo lee: la sesión dura 7 días esté marcado o no.
+- **Avisos de `next/image` corregidos en el origen.** Next avisa "width or height modified" cuando solo uno de los dos tamaños renderizados (enteros) difiere de su atributo. Las flechas medían 19.798×20, así que siempre avisaban; ahora usan una caja de 20×20 con `object-contain` y el dibujo sigue en 19.798×20. Los íconos de la barra y el escudo del login usan `loading="eager"`, porque pueden ser el elemento más grande al cargar (LCP).
 
 ### Planeadas (todavía no implementadas)
 
@@ -207,6 +214,7 @@ prisma/
 - Búsqueda que ignore tildes: hoy "jose" no encuentra "José". Se resolvería con la extensión `unaccent` de Postgres o con una columna de nombre normalizado.
 - Cachear el listado con Cache Components de Next 16, con invalidación.
 - Límite de intentos en el login.
+- Comportamiento de "Recordarme": sesión corta (cookie de sesión) si no está marcado y de 7 días si lo está.
 - Migrar a Prisma 8 cuando su documentación se estabilice.
 - Integración continua (lint y build en cada pull request).
 - Auditoría de accesibilidad.

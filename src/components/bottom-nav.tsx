@@ -41,13 +41,25 @@ export function BottomNav() {
             aria-label={label}
             aria-current={active ? "page" : undefined}
           >
-            <Icon src={active ? src.active : src.inactive} {...icon} box={28} />
+            <Icon
+              src={active ? src.active : src.inactive}
+              {...icon}
+              box={28}
+              // Según la página, un ícono de la barra puede ser el LCP.
+              loading="eager"
+            />
           </Link>
         );
       })}
       <form action={logout}>
         <button type="submit" aria-label="Salir" className="cursor-pointer">
-          <Icon src="/icons/nav-logout.svg" width={23.3333} height={22.1667} box={28} />
+          <Icon
+            src="/icons/nav-logout.svg"
+            width={23.3333}
+            height={22.1667}
+            box={28}
+            loading="eager"
+          />
         </button>
       </form>
     </nav>

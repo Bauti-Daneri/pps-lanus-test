@@ -24,7 +24,12 @@ export const MOVEMENT_TYPES: Record<MovementType, MovementTypeStyle> = {
   CASH_IN: {
     label: "Pago recibido",
     filterLabel: "Recibido",
-    icon: { src: "/icons/arrow-down.svg", width: 19.798, height: 20 },
+    // El SVG mide 19.798x20. Con esos atributos next/image avisa "width or
+    // height modified" (compara el tamaño renderizado, entero, con el
+    // atributo). Caja entera de 20x20 y object-contain: el dibujo queda en
+    // 19.798x20, igual que antes.
+    icon: { src: "/icons/arrow-down.svg", width: 20, height: 20 },
+    iconClassName: "h-[20px] object-contain",
     tintClassName: "bg-granate-tint",
     amountClassName: "text-granate",
   },
@@ -33,8 +38,9 @@ export const MOVEMENT_TYPES: Record<MovementType, MovementTypeStyle> = {
     filterLabel: "Enviado",
     // El asset exportado del Figma apunta hacia abajo; en el diseño se ve
     // girado 180° (hacia arriba).
-    icon: { src: "/icons/arrow-up.svg", width: 19.798, height: 20 },
-    iconClassName: "rotate-180",
+    // Misma caja de 20x20 que arrow-down (ver arriba).
+    icon: { src: "/icons/arrow-up.svg", width: 20, height: 20 },
+    iconClassName: "h-[20px] rotate-180 object-contain",
     tintClassName: "bg-warning-tint",
     amountClassName: "text-warning",
   },
