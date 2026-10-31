@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { MovementType } from "@/generated/prisma/enums";
 import { MOVEMENT_TYPES } from "@/lib/movement-types";
+import { movementsQueryString } from "@/lib/search";
 
 // "Todos" más una pestaña por tipo, en el orden del mapa central.
 const TABS: { label: string; type?: MovementType }[] = [
@@ -17,14 +18,6 @@ export function activeFilterType(type: string | undefined) {
   return TABS.find((tab) => tab.type !== undefined && tab.type === type)?.type;
 }
 
-function filterHref(q: string | undefined, type: MovementType | undefined) {
-  const params = new URLSearchParams();
-  if (q) params.set("q", q);
-  if (type) params.set("type", type);
-  const qs = params.toString();
-  return qs ? `/movimientos?${qs}` : "/movimientos";
-}
-
 export function MovementFilters({ q, type }: { q?: string; type?: string }) {
   const active = activeFilterType(type);
 
@@ -38,7 +31,7 @@ export function MovementFilters({ q, type }: { q?: string; type?: string }) {
         return (
           <Link
             key={tab.label}
-            href={filterHref(q?.trim(), tab.type)}
+            href={`/movimientos${movementsQueryString({ q: q?.trim(), type: tab.type })}`}
             scroll={false}
             aria-current={isActive ? "true" : undefined}
             // Borde transparente en las inactivas: misma medida que la activa,

@@ -7,20 +7,16 @@ import {
   SearchInput,
 } from "@/components/movement-search";
 import { verifySession } from "@/lib/dal";
+import { firstParam } from "@/lib/search";
 import { searchMovements } from "@/server/movements";
-
-// Un parámetro repetido (?q=a&q=b) llega como array: se usa el primero.
-function first(value: string | string[] | undefined) {
-  return Array.isArray(value) ? value[0] : value;
-}
 
 export default async function MovimientosPage({
   searchParams,
 }: PageProps<"/movimientos">) {
   const { userId } = await verifySession();
   const params = await searchParams;
-  const q = first(params.q);
-  const type = first(params.type);
+  const q = firstParam(params.q);
+  const type = firstParam(params.type);
 
   // El servicio valida type, recorta q y escapa los comodines.
   const movements = await searchMovements(userId, { q, type });
@@ -35,7 +31,7 @@ export default async function MovimientosPage({
         {movements.length === 0 && isFiltered ? (
           <FilteredEmpty />
         ) : (
-          <MovementList movements={movements} />
+          <MovementList movements={movements} query={{ q, type }} />
         )}
       </PendingFade>
     </MovementSearchProvider>

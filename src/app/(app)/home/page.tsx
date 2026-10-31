@@ -35,7 +35,7 @@ export default async function HomePage() {
 
       <section className="flex flex-col gap-6">
         <h2 className="font-display text-title font-semibold">Últimos movimientos</h2>
-        <MovementList movements={movements} />
+        <MovementList movements={movements} query={{ from: "home" }} />
       </section>
     </>
   );

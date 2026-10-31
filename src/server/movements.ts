@@ -53,6 +53,23 @@ export async function getRecentMovements(
   });
 }
 
+// Un id vacío o más largo que cualquiera generado por la base no puede existir:
+// se descarta sin consultar.
+const MAX_ID_LENGTH = 40;
+
+// Filtra por id Y por userId: un movimiento de otro usuario da null, igual que
+// uno inexistente, así la respuesta no revela si existe.
+export async function getMovementForUser(
+  userId: string,
+  id: string,
+): Promise<MovementItem | null> {
+  if (id.length === 0 || id.length > MAX_ID_LENGTH) return null;
+  return prisma.movement.findUnique({
+    where: { id, userId },
+    select: movementSelect,
+  });
+}
+
 export async function searchMovements(
   userId: string,
   { q, type }: { q?: string; type?: string },

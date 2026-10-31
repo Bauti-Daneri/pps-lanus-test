@@ -33,7 +33,8 @@ export function BottomNav() {
       className="fixed inset-x-0 bottom-0 mx-auto flex h-[86px] w-full max-w-[414px] items-start justify-between rounded-t-3xl bg-surface-3 px-16 pb-[34px] pt-6 shadow-nav"
     >
       {LINKS.map(({ href, label, icon, src }) => {
-        const active = pathname === href;
+        // También en subrutas: /movimientos/<id> marca Movimientos.
+        const active = pathname === href || pathname.startsWith(href + "/");
         return (
           <Link
             key={href}
