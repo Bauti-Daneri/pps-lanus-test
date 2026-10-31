@@ -37,6 +37,8 @@ Requisitos: Node.js 20.9 o superior y una base PostgreSQL. Para las URLs, creá 
 5. Cargar el usuario de prueba, su tarjeta y sus movimientos: `npx prisma db seed` (idempotente: no duplica datos).
 6. Levantar con `npm run dev` y abrir http://localhost:3000.
 
+**Deploy en Vercel:** cargar `DATABASE_URL`, `DIRECT_URL` y `SESSION_SECRET` como variables de entorno del proyecto (el `postinstall` genera el cliente de Prisma). Las migraciones no corren en el deploy: se aplican a mano con `npx prisma migrate deploy`.
+
 ## Decisiones técnicas
 
 1. **Un solo proyecto Next.js para front y back:** un solo deploy y sin CORS; se separaría con varios clientes o equipos.
